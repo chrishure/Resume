@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Riddle Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f8ff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            position: relative;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 300px;
+            position: relative;
+            z-index: 10;
+        }
+        h1 {
+            font-size: 2rem;
+            color: #333;
+        }
+        .riddle {
+            font-size: 1.2rem;
+            margin: 20px 0;
+        }
+        input {
+            padding: 10px;
+            width: 100%;
+            font-size: 1rem;
+            margin-bottom: 20px;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 1rem;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .hint-button {
+            background-color: #ffa500;
+            margin-top: 10px;
+        }
+        .hint-button:hover {
+            background-color: #ff7f00;
+        }
+        .score {
+            margin-top: 20px;
+        }
+        .score p {
+            font-size: 1.2rem;
+        }
+        #hintMessage {
+            font-style: italic;
+            color: #666;
+        }
+        .restart-button {
+            background-color: #ff6347;
+            margin-top: 10px;
+        }
+        .restart-button:hover {
+            background-color: #e5533e;
+        }
+        #winnerMessage {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #ff6347;
+            margin-top: 20px;
+            display: none;
+        }
+        #highScore {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Riddle Game</h1>
+        <div class="riddle" id="riddleText"></div>
+        <input type="text" id="answerInput" placeholder="Enter your answer" />
+        <button onclick="checkAnswer()">Submit Answer</button>
+        <button class="hint-button" onclick="giveHint()">Hint</button>
+        <div class="score">
+            <p>Score: <span id="score">0</span></p>
+            <p id="message"></p>
+            <p id="hintMessage"></p>
+        </div>
+        <button class="restart-button" id="restartButton" style="display:none;" onclick="restartGame()">Play Again</button>
+        <div id="winnerMessage">New High Score!</div>
+    </div>
+
+    <!-- High Score -->
+    <div id="highScore">High Score: 0</div>
+
+    <!-- Canvas for Confetti -->
+    <canvas id="confettiCanvas" style="position: absolute; top: 0; left: 0; pointer-events: none; width: 100%; height: 100%; z-index: 1;"></canvas>
+
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.4.0/dist/confetti.browser.min.js"></script>
+    <script>
+        // List of riddles, answers, and hints (All answers are one word)
+        const riddles = [
+            { question: "What has keys but can't open locks?", answer: "piano", hint: "It's a musical instrument." },
+            { question: "What has a heart that doesn't beat?", answer: "artichoke", hint: "It's a vegetable you can eat." },
+            { question: "The more you take, the more you leave behind. What am I?", answer: "footsteps", hint: "It's something that happens as you walk." },
+            { question: "What comes once in a minute, twice in a moment, but never in a thousand years?", answer: "m", hint: "It's a letter." },
+            { question: "What can travel around the world while staying in the corner?", answer: "stamp", hint: "It's something small that sticks to letters." },
+            { question: "What is so fragile that saying its name breaks it?", answer: "silence", hint: "It's something that you can't see or touch." },
+            { question: "What has one head, one foot, and four legs?", answer: "bed", hint: "It's a piece of furniture." },
+            { question: "What comes down but never goes up?", answer: "rain", hint: "It's something that falls from the sky." },
+            { question: "What has a neck but no head?", answer: "bottle", hint: "You can find it in the kitchen." },
+            { question: "What can be cracked, made, told, and played?", answer: "joke", hint: "It's something you tell for fun." },
+            { question: "I am tall when I am young, and I am short when I am old. What am I?", answer: "candle", hint: "You light it with fire." },
+            { question: "What word is spelled incorrectly in every dictionary?", answer: "incorrectly", hint: "It’s a tricky word." },
+            { question: "What belongs to you, but others use it more than you do?", answer: "name", hint: "It's something unique to you." },
+            { question: "What has a thumb and four fingers, but is not alive?", answer: "glove", hint: "You wear it on your hand." },
+            { question: "What gets wetter as it dries?", answer: "towel", hint: "You use it after a shower." },
+            { question: "What can you catch, but not throw?", answer: "cold", hint: "It's a common illness." },
+            { question: "What has a face and two hands, but no arms or legs?", answer: "clock", hint: "You check it to see the time." },
+            { question: "What starts with an E, ends with an E, but only has one letter?", answer: "envelope", hint: "You send letters in it." },
+            { question: "What has cities, but no houses; forests, but no trees; and rivers, but no water?", answer: "map", hint: "It helps you navigate." },
+            { question: "What runs, but never walks?", answer: "water", hint: "It can be found in rivers." },
+            { question: "What is always in front of you but can’t be seen?", answer: "future", hint: "It hasn't happened yet." },
+            { question: "What is light as a feather, yet the strongest man can’t hold it for much longer?", answer: "breath", hint: "You inhale and exhale it." },
+            { question: "What has one eye, but can’t see?", answer: "needle", hint: "It’s used for sewing." }
+        ];
+
+        let score = 0;
+        let highScore = 0; // High score variable
+        let currentRiddleIndex = 0;
+        let answerInput = document.getElementById("answerInput");
+        let riddleText = document.getElementById("riddleText");
+        let scoreElement = document.getElementById("score");
+        let highScoreElement = document.getElementById("highScore");
+        let messageElement = document.getElementById("message");
+        let hintMessageElement = document.getElementById("hintMessage");
+        let restartButton = document.getElementById("restartButton");
+        let winnerMessageElement = document.getElementById("winnerMessage");
+
+        let hintUsed = false; // Flag to track if the hint has been used
+
+        // Confetti Function
+        function startConfetti() {
+            confetti({
+                particleCount: 500, // More confetti when a high score is achieved
+                spread: 150,
+                origin: { y: 0.6 }
+            });
+        }
+
+        // Function to display the next riddle
+        function showRiddle() {
+            if (currentRiddleIndex < riddles.length) {
+                riddleText.innerText = riddles[currentRiddleIndex].question;
+                hintMessageElement.innerText = ''; // Clear hint text for the new riddle
+                hintUsed = false; // Reset hint flag
+            } else {
+                riddleText.innerText = "Congratulations! You've completed all the riddles.";
+                messageElement.innerText = "You've answered correctly!";
+                restartButton.style.display = 'block'; // Show the "Play Again" button
+                winnerMessageElement.style.display = 'block'; // Show the "New High Score" message
+                startConfetti(); // Start confetti animation
+                document.querySelector('button').disabled = true;
+                document.querySelector('.hint-button').disabled = true;
+            }
+        }
+
+        // Function to check the answer (one attempt per riddle)
+        function checkAnswer() {
+            let userAnswer = answerInput.value.trim().toLowerCase();
+            let correctAnswer = riddles[currentRiddleIndex].answer.toLowerCase();
+
+            if (userAnswer === correctAnswer) {
+                score++;
+                scoreElement.innerText = score;
+                if (score > highScore) {
+                    highScore = score; // Update high score
+                    highScoreElement.innerText = `High Score: ${highScore}`;
+                    startConfetti(); // More confetti when a new high score is achieved
+                    winnerMessageElement.style.fontSize = "3rem"; // Make Winner message bigger
+                    winnerMessageElement.style.display = 'block'; // Show "New High Score"
+                }
+                messageElement.innerText = "Correct! Next riddle...";
+                currentRiddleIndex++;
+                showRiddle();
+            } else {
+                score = 0; // Reset score to zero on incorrect answer
+                scoreElement.innerText = score;
+                messageElement.innerText = `Incorrect. The correct answer was "${correctAnswer}".`;
+                restartButton.style.display = 'block'; // Show the "Play Again" button
+            }
+
+            // Clear the input field
+            answerInput.value = '';
+            answerInput.focus();
+        }
+
+        // Function to give a hint
+        function giveHint() {
+            if (!hintUsed) {
+                hintMessageElement.innerText = `Hint: ${riddles[currentRiddleIndex].hint}`;
+                hintUsed = true; // Set flag to true after hint is used
+            } else {
+                hintMessageElement.innerText = "Hint already used!";
+            }
+        }
+
+        // Function to restart the game
+        function restartGame() {
+            score = 0;
+            currentRiddleIndex = 0;
+            messageElement.innerText = '';
+            hintMessageElement.innerText = '';
+            scoreElement.innerText = score;
+            restartButton.style.display = 'none'; // Hide the "Play Again" button
+            winnerMessageElement.style.display = 'none'; // Hide the "New High Score" message
+            showRiddle(); // Start the game from the first riddle
+        }
+
+        // Listen for Enter key to submit answer
+        answerInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                checkAnswer();
+            }
+        });
+
+        // Initialize the game
+        showRiddle();
+    </script>
+</body>
+</html>
+
